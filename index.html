@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Year 1 Word Quest - English PdPR</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Fredoka & Comic Neue for friendly typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+  <!-- Canvas Confetti for celebratory end-screen -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Fredoka', 'Quicksand', 'Comic Sans MS', sans-serif;
+      background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(10px);
+      border: 4px solid #ffffff;
+      box-shadow: 0 20px 30px rgba(0, 0, 0, 0.12);
+    }
+
+    .bubble-btn {
+      transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .bubble-btn:hover {
+      transform: translateY(-3px) scale(1.03);
+    }
+
+    .bubble-btn:active {
+      transform: translateY(2px) scale(0.97);
+    }
+
+    .key-btn {
+      touch-action: manipulation;
+      transition: transform 0.08s ease, background-color 0.1s;
+    }
+
+    .key-btn:active {
+      transform: scale(0.9);
+    }
+
+    /* Bounce animation for correct answer feedback */
+    @keyframes bounce-fun {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-12px) scale(1.05); }
+    }
+
+    /* Shake animation for wrong feedback */
+    @keyframes shake-fun {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+
+    .animate-bounce-fun {
+      animation: bounce-fun 0.5s ease;
+    }
+
+    .animate-shake-fun {
+      animation: shake-fun 0.4s ease;
+    }
+
+    /* Letter input slot design */
+    .letter-slot {
+      border-bottom: 4px solid #3b82f6;
+      min-width: 2.2rem;
+      height: 3rem;
+      font-size: 1.8rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: #1e3a8a;
+      margin: 0 3px;
+      text-transform: lowercase;
+    }
+
+    .letter-slot.filled {
+      border-bottom-color: #f59e0b;
+      color: #d97706;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-3 md:p-6 text-slate-800">
+
+  <div class="w-full max-w-2xl">
+    
+    <!-- Game Board Card -->
+    <div id="game-card" class="glass-card rounded-3xl p-4 sm:p-7 text-center relative overflow-hidden transition-all duration-300">
+      
+      <!-- Top Bar: Progress & Score -->
+      <div id="top-bar" class="flex flex-wrap items-center justify-between gap-2 mb-4 bg-amber-50 p-3 rounded-2xl border-2 border-amber-200">
+        <div class="flex items-center gap-2">
+          <span id="unit-badge" class="bg-indigo-600 text-white text-xs sm:text-sm font-bold px-3 py-1 rounded-full shadow">
+            Unit 1: At School
+          </span>
+          <span id="q-counter" class="text-xs sm:text-sm font-bold text-slate-600">
+            Q 1/20
+          </span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <span class="text-sm font-bold text-amber-700">⭐ Score:</span>
+          <span id="score-display" class="text-2xl font-black text-amber-600">0</span>
+          <span class="text-sm font-bold text-slate-400">/ 20</span>
+        </div>
+      </div>
+
+      <!-- Progress Bar -->
+      <div class="w-full bg-slate-200 h-3.5 rounded-full overflow-hidden mb-5 p-0.5 border border-slate-300">
+        <div id="progress-fill" class="bg-gradient-to-r from-emerald-400 to-teal-500 h-full rounded-full transition-all duration-300" style="width: 5%"></div>
+      </div>
+
+      <div id="question-area" class="min-h-[160px] flex flex-col justify-center items-center my-2">
+        <!-- Clue Text -->
+        <div class="bg-sky-50 border-2 border-sky-200 rounded-2xl p-4 mb-4 w-full">
+          <p class="text-xs font-bold text-sky-600 uppercase tracking-wider mb-1">💡 Clue</p>
+          <p id="clue-text" class="text-lg sm:text-xl md:text-2xl font-bold text-sky-900 leading-snug">
+            You write with this.
+          </p>
+        </div>
+
+        <!-- Pattern / Word Slots -->
+        <div class="my-3">
+          <p class="text-xs font-bold text-slate-400 mb-2">FILL IN THE MISSING LETTERS</p>
+          <div id="pattern-display" class="flex flex-wrap justify-center items-center gap-1 sm:gap-2 text-2xl font-extrabold tracking-widest text-indigo-700">
+            <!-- Dynamic Slots Inserted Here -->
+          </div>
+        </div>
+      </div>
+
+      <div id="input-section" class="mt-4 mb-2">
+        <form id="answer-form" onsubmit="handleFormSubmit(event)" class="flex flex-col items-center gap-3">
+          <input 
+            type="text" 
+            id="text-input" 
+            class="w-full max-w-xs text-center text-xl font-bold px-4 py-2.5 rounded-2xl border-4 border-indigo-300 focus:border-amber-400 focus:outline-none shadow-inner bg-white text-indigo-900 transition-colors"
+            placeholder="Type word here..."
+            autocomplete="off"
+            autofocus
+          />
+          
+          <button 
+            type="submit" 
+            id="submit-btn"
+            class="bubble-btn bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white font-extrabold text-lg sm:text-xl px-8 py-3 rounded-2xl shadow-lg border-b-4 border-orange-700 w-full max-w-xs flex items-center justify-center gap-2 cursor-pointer">
+            <span>SUBMIT</span>
+            <span class="text-2xl">🚀</span>
+          </button>
+        </form>
+      </div>
+
+      <div id="virtual-keyboard" class="mt-4 pt-3 border-t-2 border-dashed border-slate-200">
+        <p class="text-xs font-bold text-slate-400 mb-2">TAP LETTERS TO TYPE:</p>
+        <div id="keyboard-rows" class="flex flex-col gap-1.5 items-center justify-center">
+          <!-- Keyboards generated via JS -->
+        </div>
+      </div>
+
+      <div id="feedback-banner" class="hidden absolute inset-x-4 top-1/2 -translate-y-1/2 p-6 rounded-3xl shadow-2xl border-4 flex flex-col items-center justify-center z-20 backdrop-blur-md">
+        <div id="feedback-icon" class="text-6xl mb-2">🎉</div>
+        <div id="feedback-title" class="text-2xl sm:text-3xl font-black mb-1">Correct!</div>
+        <div id="feedback-sub" class="text-base sm:text-lg font-bold">Great job!</div>
+      </div>
+
+    </div>
+
+    <div id="end-card" class="hidden glass-card rounded-3xl p-6 sm:p-8 text-center relative overflow-hidden my-auto">
+      <div class="text-6xl mb-3">🏆</div>
+      <h1 class="text-3xl sm:text-4xl font-black text-indigo-900 mb-1">Awesome Effort!</h1>
+      <p class="text-slate-600 font-bold mb-6 text-base sm:text-lg">You completed the Year 1 English Challenge!</p>
+
+      <!-- Score Ring Box -->
+      <div class="bg-gradient-to-br from-amber-100 to-yellow-200 border-4 border-amber-300 rounded-3xl p-6 max-w-xs mx-auto mb-6 shadow-md">
+        <p class="text-xs font-bold text-amber-800 uppercase tracking-widest mb-1">YOUR FINAL SCORE</p>
+        <div class="text-5xl font-black text-amber-600 my-1">
+          <span id="final-score">0</span> <span class="text-3xl font-bold text-amber-800">/ 20</span>
+        </div>
+        <p id="score-comment" class="text-sm font-bold text-amber-900 mt-2">Super Star Student! 🌟</p>
+      </div>
+
+      <!-- Buttons -->
+      <button 
+        onclick="restartGame()" 
+        class="bubble-btn bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-extrabold text-xl px-10 py-4 rounded-2xl shadow-xl border-b-4 border-teal-800 flex items-center justify-center gap-3 mx-auto cursor-pointer">
+        <span>PLAY AGAIN</span>
+        <span class="text-2xl">🔄</span>
+      </button>
+    </div>
+
+  </div>
+
+  <script>
+    // Full dataset with 20 questions across 4 units
+    const QUESTIONS = [
+      // Unit 1: At School
+      { unit: "Unit 1: At School", clue: "You write with this.", pattern: "p _ n c _ l", answer: "pencil" },
+      { unit: "Unit 1: At School", clue: "You use this to draw straight lines.", pattern: "r _ _ _ r", answer: "ruler" },
+      { unit: "Unit 1: At School", clue: "You use this to erase pencil marks.", pattern: "r _ _ b _ r", answer: "rubber" },
+      { unit: "Unit 1: At School", clue: "You carry your books in this.", pattern: "b _ _", answer: "bag" },
+      { unit: "Unit 1: At School", clue: "You write your work in this.", pattern: "n _ t _ b _ _ k", answer: "notebook" },
+
+      // Unit 2: Let's Play!
+      { unit: "Unit 2: Let's Play!", clue: "You fly this in the wind.", pattern: "k _ _ _", answer: "kite" },
+      { unit: "Unit 2: Let's Play!", clue: "Girls often play with this toy. It looks like a little person.", pattern: "d _ _ l", answer: "doll" },
+      { unit: "Unit 2: Let's Play!", clue: "This toy has wheels and runs on tracks.", pattern: "t _ _ _ n", answer: "train" },
+      { unit: "Unit 2: Let's Play!", clue: "You use this to play games on a computer.", pattern: "c _ _ _ _ t _ r", answer: "computer" },
+      { unit: "Unit 2: Let's Play!", clue: "You kick or throw this when you play.", pattern: "b _ _ _", answer: "ball" },
+
+      // Unit 3: Pet Show
+      { unit: "Unit 3: Pet Show", clue: "This animal says “meow”.", pattern: "c _ _", answer: "cat" },
+      { unit: "Unit 3: Pet Show", clue: "This animal says “woof”.", pattern: "_ _ g", answer: "dog" },
+      { unit: "Unit 3: Pet Show", clue: "This animal has long ears and likes carrots.", pattern: "r _ b _ _ _", answer: "rabbit" },
+      { unit: "Unit 3: Pet Show", clue: "This animal can swim and says “quack”.", pattern: "d _ _ _", answer: "duck" },
+      { unit: "Unit 3: Pet Show", clue: "This animal has eight legs.", pattern: "s p _ _ _ r", answer: "spider" },
+
+      // Unit 4: Lunchtime
+      { unit: "Unit 4: Lunchtime", clue: "This fruit is long and yellow.", pattern: "b _ _ _ _a", answer: "banana" },
+      { unit: "Unit 4: Lunchtime", clue: "You can make this with bread and cheese.", pattern: "s _ _ _ _ _ c h", answer: "sandwich" },
+      { unit: "Unit 4: Lunchtime", clue: "This food comes from chickens.", pattern: "_ _ g", answer: "egg" },
+      { unit: "Unit 4: Lunchtime", clue: "This food is cold and sweet.", pattern: "i _ _ c r _ _ _", answer: "ice cream" },
+      { unit: "Unit 4: Lunchtime", clue: "This fruit is round and orange.", pattern: "_ r _ n _ _", answer: "orange" }
+    ];
+
+    // State variables
+    let currentIndex = 0;
+    let score = 0;
+    let isProcessingAnswer = false;
+
+    // Web Audio API Synthesizer (No external audio files required)
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playSound(type) {
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      const now = audioCtx.currentTime;
+
+      if (type === 'correct') {
+        // High upbeat melody chime
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523.25, now); // C5
+        osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+        osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
+        osc.frequency.setValueAtTime(1046.50, now + 0.3); // C6
+
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+        osc.start(now);
+        osc.stop(now + 0.5);
+      } else if (type === 'wrong') {
+        // Soft low tone warning
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(220, now); // A3
+        osc.frequency.setValueAtTime(164.81, now + 0.15); // E3
+
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+        osc.start(now);
+        osc.stop(now + 0.4);
+      } else if (type === 'tap') {
+        // Subtle click sound for key press
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(400, now);
+        gain.gain.setValueAtTime(0.05, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+        osc.start(now);
+        osc.stop(now + 0.05);
+      }
+    }
+
+    const textInput = document.getElementById('text-input');
+    const unitBadge = document.getElementById('unit-badge');
+    const qCounter = document.getElementById('q-counter');
+    const scoreDisplay = document.getElementById('score-display');
+    const progressFill = document.getElementById('progress-fill');
+    const clueText = document.getElementById('clue-text');
+    const patternDisplay = document.getElementById('pattern-display');
+    const feedbackBanner = document.getElementById('feedback-banner');
+    const submitBtn = document.getElementById('submit-btn');
+
+    function renderQuestion() {
+      isProcessingAnswer = false;
+      const q = QUESTIONS[currentIndex];
+
+      // Update Top Status
+      unitBadge.innerText = q.unit;
+      qCounter.innerText = `Q ${currentIndex + 1}/20`;
+      scoreDisplay.innerText = score;
+
+      // Progress bar percentage
+      const pct = ((currentIndex) / QUESTIONS.length) * 100;
+      progressFill.style.width = `${pct}%`;
+
+      // Update Clue & Input reset
+      clueText.innerText = q.clue;
+      textInput.value = '';
+      textInput.disabled = false;
+      submitBtn.disabled = false;
+      
+      // Focus text box on desktop automatically
+      setTimeout(() => textInput.focus(), 100);
+
+      // Render pattern slots
+      patternDisplay.innerHTML = '';
+      const chars = q.pattern.split(' ');
+      chars.forEach(char => {
+        if (char === '_') {
+          const slot = document.createElement('span');
+          slot.className = 'letter-slot';
+          slot.innerText = '_';
+          patternDisplay.appendChild(slot);
+        } else if (char === '') {
+          // Extra space spacer
+          const spacer = document.createElement('span');
+          spacer.className = 'w-3';
+          patternDisplay.appendChild(spacer);
+        } else {
+          const slot = document.createElement('span');
+          slot.className = 'letter-slot filled';
+          slot.innerText = char;
+          patternDisplay.appendChild(slot);
+        }
+      });
+
+      // Hide Feedback Banner
+      feedbackBanner.classList.add('hidden');
+    }
+
+    function handleFormSubmit(e) {
+      if (e) e.preventDefault();
+      if (isProcessingAnswer) return;
+
+      const userAns = textInput.value.trim().toLowerCase();
+      if (!userAns) {
+        textInput.focus();
+        return;
+      }
+
+      isProcessingAnswer = true;
+      textInput.disabled = true;
+      submitBtn.disabled = true;
+
+      const currentQ = QUESTIONS[currentIndex];
+      const targetAns = currentQ.answer.toLowerCase();
+
+      // Check correctness (exact match or space-normalized for multi-word like "ice cream")
+      const isCorrect = (userAns === targetAns) || (userAns.replace(/\s+/g, '') === targetAns.replace(/\s+/g, ''));
+
+      if (isCorrect) {
+        // SCORE UP
+        score++;
+        scoreDisplay.innerText = score;
+        playSound('correct');
+        showFeedback(true, targetAns);
+      } else {
+        // FAIL (NO RETRY ALLOWED) - Display answer briefly and proceed
+        playSound('wrong');
+        showFeedback(false, targetAns);
+      }
+
+      // Automatically transition to next question after 1.8s
+      setTimeout(() => {
+        currentIndex++;
+        if (currentIndex < QUESTIONS.length) {
+          renderQuestion();
+        } else {
+          showEndScreen();
+        }
+      }, 1800);
+    }
+
+    function showFeedback(isCorrect, correctAnswer) {
+      feedbackBanner.classList.remove('hidden', 'bg-emerald-500', 'bg-rose-500', 'border-emerald-300', 'border-rose-300', 'text-white');
+      
+      const icon = document.getElementById('feedback-icon');
+      const title = document.getElementById('feedback-title');
+      const sub = document.getElementById('feedback-sub');
+
+      if (isCorrect) {
+        feedbackBanner.classList.add('bg-emerald-500', 'border-emerald-300', 'text-white', 'animate-bounce-fun');
+        icon.innerText = '🌟';
+        title.innerText = 'CORRECT!';
+        sub.innerText = 'Super job!';
+      } else {
+        feedbackBanner.classList.add('bg-rose-500', 'border-rose-300', 'text-white', 'animate-shake-fun');
+        icon.innerText = '❌';
+        title.innerText = 'NOT QUITE!';
+        sub.innerText = `The answer was: "${correctAnswer.toUpperCase()}"`;
+      }
+    }
+
+    function buildVirtualKeyboard() {
+      const container = document.getElementById('keyboard-rows');
+      container.innerHTML = '';
+
+      const rows = [
+        ['q','w','e','r','t','y','u','i','o','p'],
+        ['a','s','d','f','g','h','j','k','l'],
+        ['z','x','c','v','b','n','m','⌫']
+      ];
+
+      rows.forEach(row => {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'flex gap-1 justify-center w-full';
+
+        row.forEach(key => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.innerText = key;
+          
+          if (key === '⌫') {
+            btn.className = 'key-btn bg-rose-200 text-rose-800 font-bold rounded-lg px-2.5 py-1.5 text-sm shadow hover:bg-rose-300';
+            btn.onclick = () => {
+              playSound('tap');
+              textInput.value = textInput.value.slice(0, -1);
+              textInput.focus();
+            };
+          } else {
+            btn.className = 'key-btn bg-white border border-slate-300 text-indigo-900 font-extrabold rounded-lg px-2 sm:px-3 py-1.5 text-base sm:text-lg shadow hover:bg-indigo-50';
+            btn.onclick = () => {
+              playSound('tap');
+              textInput.value += key;
+              textInput.focus();
+            };
+          }
+
+          rowDiv.appendChild(btn);
+        });
+
+        container.appendChild(rowDiv);
+      });
+    }
+
+    function showEndScreen() {
+      document.getElementById('game-card').classList.add('hidden');
+      const endCard = document.getElementById('end-card');
+      endCard.classList.remove('hidden');
+
+      document.getElementById('final-score').innerText = score;
+      
+      const commentEl = document.getElementById('score-comment');
+      if (score === 20) {
+        commentEl.innerText = "PERFECT SCORE! 🏆 Champion!";
+      } else if (score >= 15) {
+        commentEl.innerText = "EXCELLENT WORK! 🌟 Great job!";
+      } else if (score >= 10) {
+        commentEl.innerText = "GOOD TRY! 👍 Keep practicing!";
+      } else {
+        commentEl.innerText = "NICE EFFORT! 💪 Try again to get higher!";
+      }
+
+      // Launch Confetti effect
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+      }
+    }
+
+    function restartGame() {
+      currentIndex = 0;
+      score = 0;
+      document.getElementById('end-card').classList.add('hidden');
+      document.getElementById('game-card').classList.remove('hidden');
+      renderQuestion();
+    }
+
+    // Initialize game on load
+    window.onload = function() {
+      buildVirtualKeyboard();
+      renderQuestion();
+    };
+  </script>
+</body>
+</html>
